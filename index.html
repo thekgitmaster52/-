@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>5분 생존 챌린지 - SIUUU 스킬 추가판</title>
+<style>
+:root{--bg:#080d1b;--panel:#121b31;--cyan:#67e8f9;--pink:#fb7185;--gold:#facc15;--purple:#c084fc;--text:#eef4ff}
+*{box-sizing:border-box}
+html, body{height:100%;overflow:hidden}
+body{margin:0;background:radial-gradient(circle at top,#18264a 0,#080d1b 55%);color:var(--text);font-family:system-ui,-apple-system,"Noto Sans KR",sans-serif;display:flex;justify-content:center;align-items:center;padding:8px}
+.app{width:min(100%,860px);max-height:100vh;display:flex;flex-direction:column;justify-content:space-between}
+header{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px}
+h1{font-size:clamp(18px,3.5vw,26px);margin:0;letter-spacing:-.04em}
+h1 span{color:var(--cyan)}
+.sub{color:#9fb0d1;font-size:11px;margin-top:2px}
+.header-btns{display:flex;gap:6px}
+button{touch-action:manipulation;-webkit-tap-highlight-color:transparent;font:inherit;border:0;cursor:pointer;color:var(--text)}
+.btn{padding:8px 12px;border-radius:10px;background:#253554;font-weight:700;font-size:13px;transition:transform .1s, filter .1s}
+.btn:active{transform:scale(.96)}
+.btn:hover{filter:brightness(1.15)}
+.btn.primary{background:linear-gradient(135deg,#06b6d4,#4f46e5);box-shadow:0 4px 18px #0891b233}
+.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:6px}
+.stat{background:#121b31d9;border:1px solid #293957;border-radius:11px;padding:6px 8px;min-width:0}
+.stat .label{font-size:10px;color:#9fb0d1}
+.stat .value{font-size:clamp(14px,2.5vw,18px);font-weight:800;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#hearts{color:var(--pink);letter-spacing:1px}
+.arena{position:relative;border:1px solid #334567;border-radius:14px;overflow:hidden;box-shadow:0 15px 45px #0006;background:#0a1020;flex:1;display:flex;align-items:center;justify-content:center}
+canvas{display:block;width:100%;max-height:50vh;height:auto;aspect-ratio:16/8.7;object-fit:contain;touch-action:none}
+.overlay{position:absolute;inset:0;background:#071020d9;backdrop-filter:blur(5px);display:flex;align-items:center;justify-content:center;padding:14px;z-index:10}
+.overlay.hidden{display:none}
+.dialog{width:min(100%,440px);text-align:center;background:#121b31f5;border:1px solid #3a4d70;border-radius:18px;padding:18px;box-shadow:0 15px 50px #0008}
+.dialog h2{font-size:clamp(20px,4.5vw,28px);margin:0 0 6px}
+.dialog p{color:#b8c6e2;line-height:1.5;font-size:13px;margin:6px 0 14px}
+.dialog .big{font-size:38px;margin-bottom:2px}
+.row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.controls{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:6px;color:#9fb0d1;font-size:11px}
+
+/* 모바일 조작 레이아웃 */
+#mobileTouchArea{display:none;position:relative;width:100%;height:100px;margin-top:6px;user-select:none;touch-action:none}
+#joystickPad{position:absolute;left:10px;bottom:5px;width:90px;height:90px;border-radius:50%;background:#9fb0d122;border:2px solid #cbd5e144;touch-action:none}
+#joystickKnob{position:absolute;left:50%;top:50%;width:38px;height:38px;transform:translate(-50%,-50%);border-radius:50%;background:#67e8f9c0;border:2px solid #e0faff;box-shadow:0 2px 10px #0005;pointer-events:none}
+.action-container{position:absolute;right:10px;bottom:5px;display:flex;flex-direction:column;align-items:center;gap:4px}
+.action{width:80px;height:80px;border-radius:50%;background:linear-gradient(145deg,#0891b2,#4f46e5);font-weight:800;font-size:16px;color:#fff;box-shadow:0 6px 20px #0891b255;position:relative;overflow:hidden}
+.dash-cd-overlay{position:absolute;inset:0;background:rgba(0,0,0,0.65);height:0%;bottom:0;top:auto;transition:height 0.05s linear}
+
+@media(max-width:1024px), (pointer:coarse){
+ #mobileTouchArea{display:block}
+}
+
+.ability-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.ability{padding:12px 8px;border:1px solid #405477;border-radius:12px;background:#1b2945;text-align:center;min-height:120px;transition:transform .15s, border-color .15s}
+.ability .emoji{font-size:26px}.ability strong{display:block;margin:6px 0 3px;color:var(--text);font-size:13px}.ability small{display:block;color:#b8c6e2;line-height:1.35;font-size:11px}
+.ability:hover,.ability:active{border-color:var(--cyan);background:#24385a;transform:translateY(-2px)}
+footer{text-align:center;color:#7184a8;font-size:10px;margin-top:4px}
+@media(max-width:560px){
+ .stats{grid-template-columns:repeat(3,1fr)}
+ .ability-grid{grid-template-columns:1fr}.ability{min-height:0;display:grid;grid-template-columns:36px 1fr;text-align:left;align-items:center;padding:8px}.ability .emoji{grid-row:span 2}.ability strong{margin:0}.ability small{margin-top:2px}
+ .dialog{padding:14px}.arena{border-radius:10px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div><h1>⚡ 5분 <span>생존 챌린지</span></h1><div class="sub">SURVIVE 300 SECONDS · DODGE & EVOLVE</div></div>
+    <div class="header-btns">
+      <button type="button" id="soundBtn" class="btn">🔊 소리 ON</button>
+      <button type="button" id="pauseBtn" class="btn" hidden>Ⅱ 일시정지</button>
+    </div>
+  </header>
+  <section class="stats">
+    <div class="stat"><div class="label">남은 시간</div><div class="value" id="time">300.0초</div></div>
+    <div class="stat"><div class="label">체력</div><div class="value" id="hearts">♥ ♥ ♥</div></div>
+    <div class="stat"><div class="label">점수</div><div class="value" id="score">0</div></div>
+    <div class="stat"><div class="label">생존 계급</div><div class="value" id="rankBadge" style="color:var(--gold)">🐣 초보 생존자</div></div>
+    <div class="stat"><div class="label">최고 기록</div><div class="value" id="best">0</div></div>
+  </section>
+  <div class="arena">
+    <canvas id="game" width="960" height="520" aria-label="5분 생존 게임 화면"></canvas>
+    
+    <div id="mainOverlay" class="overlay">
+      <div class="dialog">
+        <div class="big">🛡️</div><h2>5분 동안 버텨라!</h2>
+        <p>300초간 몰려오는 적들을 피하고, 16가지 강력한 스킬을 업그레이드하세요!<br>신규 <b>⚽ SIUUU! 충격파</b> 스킬이 추가되었습니다.</p>
+        <p><b>PC:</b> WASD / 방향키 이동, Shift/스페이스 대시<br><b>모바일:</b> 좌측 조이스틱 이동 / 우측 대시 버튼</p>
+        <div class="row"><button type="button" id="startBtn" class="btn primary">챌린지 시작 ▶</button></div>
+      </div>
+    </div>
+    <div id="abilityOverlay" class="overlay hidden">
+      <div class="dialog"><h2>✨ 능력을 선택하세요</h2><p>선택 시 <b>2초간 무적 보호막</b>이 부여됩니다!</p><div id="abilityGrid" class="ability-grid"></div></div>
+    </div>
+    <div id="endOverlay" class="overlay hidden">
+      <div class="dialog"><div id="endEmoji" class="big">🏆</div><h2 id="endTitle">5분 생존 완벽 클리어!</h2><p id="endText"></p><div class="row"><button type="button" id="restartBtn" class="btn primary">다시 도전 ↻</button><button type="button" id="menuBtn" class="btn">메인 화면</button></div></div>
+    </div>
+  </div>
+
+  <div id="mobileTouchArea">
+    <div id="joystickPad" aria-label="이동 조이스틱"><div id="joystickKnob"></div></div>
+    <div class="action-container">
+      <button id="dashBtn" class="action">
+        <span>대시!</span>
+        <div id="dashCdOverlay" class="dash-cd-overlay"></div>
+      </button>
+    </div>
+  </div>
+
+  <div class="controls"><span>📱 PC: WASD / 방향키 · Shift / Space 대시</span><span id="abilityStatus">능력: 없음</span></div>
+  <footer>모바일 조작: 왼쪽 조이스틱 이동, 오른쪽 대시 버튼 회피! 대시 0.2초 무적 & 스킬 뽑기시 2초 무적!</footer>
+</div>
+
+<script>
+(() => {
+"use strict";
+const canvas=document.getElementById('game'),ctx=canvas.getContext('2d');
+const W=canvas.width,H=canvas.height;
+const $=id=>document.getElementById(id);
+const mainOverlay=$('mainOverlay'),abilityOverlay=$('abilityOverlay'),endOverlay=$('endOverlay');
+const keys=new Set();
+
+let audioCtx = null, soundEnabled = true;
+function initAudio(){if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();}
+function playSound(type){
+ if(!soundEnabled) return;
+ initAudio();
+ if(audioCtx.state === 'suspended') audioCtx.resume();
+ const osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
+ osc.connect(gain); gain.connect(audioCtx.destination);
+ const now = audioCtx.currentTime;
+ if(type === 'hit'){
+  osc.type = 'sawtooth'; osc.frequency.setValueAtTime(160, now); osc.frequency.exponentialRampToValueAtTime(40, now + 0.25);
+  gain.gain.setValueAtTime(0.3, now); gain.gain.linearRampToValueAtTime(0.01, now + 0.25);
+  osc.start(now); osc.stop(now + 0.25);
+ }else if(type === 'item'){
+  osc.type = 'sine'; osc.frequency.setValueAtTime(523, now); osc.frequency.setValueAtTime(659, now + 0.08); osc.frequency.setValueAtTime(783, now + 0.16);
+  gain.gain.setValueAtTime(0.25, now); gain.gain.linearRampToValueAtTime(0.01, now + 0.25);
+  osc.start(now); osc.stop(now + 0.25);
+ }else if(type === 'dash'){
+  osc.type = 'triangle'; osc.frequency.setValueAtTime(300, now); osc.frequency.exponentialRampToValueAtTime(800, now + 0.15);
+  gain.gain.setValueAtTime(0.2, now); gain.gain.linearRampToValueAtTime(0.01, now + 0.15);
+  osc.start(now); osc.stop(now + 0.15);
+ }else if(type === 'select'){
+  osc.type = 'sine'; osc.frequency.setValueAtTime(440, now); osc.frequency.setValueAtTime(880, now + 0.1);
+  gain.gain.setValueAtTime(0.2, now); gain.gain.linearRampToValueAtTime(0.01, now + 0.2);
+  osc.start(now); osc.stop(now + 0.2);
+ }else if(type === 'win'){
+  osc.type = 'sine'; osc.frequency.setValueAtTime(523, now); osc.frequency.setValueAtTime(659, now + 0.15); osc.frequency.setValueAtTime(783, now + 0.3); osc.frequency.setValueAtTime(1046, now + 0.45);
+  gain.gain.setValueAtTime(0.3, now); gain.gain.linearRampToValueAtTime(0.01, now + 0.7);
+  osc.start(now); osc.stop(now + 0.7);
+ }else if(type === 'bomb'){
+  osc.type = 'sawtooth'; osc.frequency.setValueAtTime(120, now); osc.frequency.exponentialRampToValueAtTime(30, now + 0.4);
+  gain.gain.setValueAtTime(0.4, now); gain.gain.linearRampToValueAtTime(0.01, now + 0.4);
+  osc.start(now); osc.stop(now + 0.4);
+ }else if(type === 'freeze'){
+  osc.type = 'sine'; osc.frequency.setValueAtTime(800, now); osc.frequency.exponentialRampToValueAtTime(200, now + 0.3);
+  gain.gain.setValueAtTime(0.3, now); gain.gain.linearRampToValueAtTime(0.01, now + 0.3);
+  osc.start(now); osc.stop(now + 0.3);
+ }else if(type === 'rankUp'){
+  osc.type = 'triangle'; osc.frequency.setValueAtTime(350, now); osc.frequency.setValueAtTime(523, now + 0.1); osc.frequency.setValueAtTime(659, now + 0.2); osc.frequency.setValueAtTime(1046, now + 0.35);
+  gain.gain.setValueAtTime(0.3, now); gain.gain.linearRampToValueAtTime(0.01, now + 0.5);
+  osc.start(now); osc.stop(now + 0.5);
+ }else if(type === 'rewind'){
+  osc.type = 'sawtooth'; osc.frequency.setValueAtTime(600, now); osc.frequency.exponentialRampToValueAtTime(150, now + 0.4);
+  gain.gain.setValueAtTime(0.35, now); gain.gain.linearRampToValueAtTime(0.01, now + 0.4);
+  osc.start(now); osc.stop(now + 0.4);
+ }else if(type === 'siuu'){
+  osc.type = 'sawtooth'; osc.frequency.setValueAtTime(220, now); osc.frequency.exponentialRampToValueAtTime(880, now + 0.3);
+  gain.gain.setValueAtTime(0.4, now); gain.gain.linearRampToValueAtTime(0.01, now + 0.35);
+  osc.start(now); osc.stop(now + 0.35);
+ }
+}
+
+$('soundBtn').addEventListener('click', ()=>{
+ soundEnabled = !soundEnabled;
+ $('soundBtn').textContent = soundEnabled ? '🔊 소리 ON' : '🔇 소리 OFF';
+});
+
+const MAX_SURVIVAL_TIME = 300;
+const MAX_DASH_CD = 1.0;
+
+let state='menu',last=0,elapsed=0,score=0,hp=3,player=null,enemies=[],bullets=[],particles=[],pickups=[],floatingTexts=[];
+let spawnTimer=0,shotTimer=0,nextAbility=0,combo=0,comboTimer=0,invuln=0,dashCooldown=0,shield=0;
+let shockTimer=0,slowTimer=0,cloneTimer=0,freezeTimer=0,laserTimer=0,siuuTimer=0,healSpawnTimer=10;
+let blackholeTimer=0, blackholeObj=null, reflectTimer=0, giantTimer=0, feverTimer=0;
+let historyPositions=[];
+let currentRankIdx=0;
+
+const abilityTimes = [10, 25, 45, 65, 85, 110, 135, 160, 185, 210, 235, 255, 270, 285, 295];
+
+const rankMilestones = [
+ { time: 0, title: '🐣 초보 생존자', color: '#9fb0d1' },
+ { time: 30, title: '🛡️ 질긴 유망주', color: '#67e8f9' },
+ { time: 60, title: '⚡ 회피의 달인', color: '#4ade80' },
+ { time: 120, title: '🔥 베테랑 사냥꾼', color: '#facc15' },
+ { time: 180, title: '👑 불사의 전설', color: '#fb7185' },
+ { time: 240, title: '🌌 우주 생존신', color: '#c084fc' }
+];
+
+let cloneObj=null;
+let joystickActive=false,joystickX=0,joystickY=0,joystickPointerId=null;
+let abilities={speed:0,shock:false,magnet:false,regen:false,shield:false,slow:false,clone:false,freeze:false,bomb:false,laser:false,blackhole:false,rewind:false,reflect:false,giant:false,fever:false,siuu:false};
+let best=0, screenShake=0;
+try{best=Number(localStorage.getItem('survive300Best')||0)}catch(e){}
+$('best').textContent=best.toLocaleString('ko-KR');
+
+const abilityInfo={
+ shield:{emoji:'🛡️',name:'에너지 실드',desc:'다음 피해 1회를 막아주는 보호막을 추가합니다.',apply(){shield++;}},
+ speed:{emoji:'⚡',name:'초고속 부츠',desc:'이동 속도가 25% 증가합니다.',apply(){abilities.speed++;}},
+ shock:{emoji:'💥',name:'충격파',desc:'2초마다 주변 적을 강력하게 밀어냅니다.',apply(){abilities.shock=true;shockTimer=0;}},
+ regen:{emoji:'💖',name:'회복 코어',desc:'체력을 1 회복합니다. (최대 3)',apply(){hp=Math.min(3,hp+1);}},
+ slow:{emoji:'⏳',name:'시간 왜곡',desc:'6초 동안 적들의 속도가 느려집니다.',apply(){slowTimer=6;}},
+ clone:{emoji:'👥',name:'분신 유인',desc:'현재 위치에 분신을 생성하여 8초간 모든 적을 유인합니다.',apply(){cloneTimer=8;cloneObj={x:player.x,y:player.y};abilities.clone=true;}},
+ magnet:{emoji:'🧲',name:'점수 자석',desc:'점수 구슬을 더 멀리서 끌어당깁니다.',apply(){abilities.magnet=true;}},
+ freeze:{emoji:'❄️',name:'절대 영도',desc:'6초 동안 모든 적과 총알을 얼려 완전히 멈춥니다.',apply(){freezeTimer=6;abilities.freeze=true;playSound('freeze');}},
+ bomb:{emoji:'💣',name:'초전도 폭탄',desc:'화면의 모든 적을 즉시 폭파하고 점수를 획득합니다.',apply(){enemies.forEach(e=>addParticles(e.x,e.y,'#facc15',12));score+=enemies.length*50;enemies=[];bullets=[];screenShake=0.3;playSound('bomb');}},
+ laser:{emoji:'🛰️',name:'위성 레이저',desc:'0.8초마다 가장 가까운 적을 자동 레이저로 제거합니다.',apply(){abilities.laser=true;laserTimer=0;}},
+ blackhole:{emoji:'🌀',name:'시공간 블랙홀',desc:'8초마다 중앙에 블랙홀이 생겨 주변 적과 총알을 빨아들입니다!',apply(){abilities.blackhole=true;blackholeTimer=0;}},
+ rewind:{emoji:'⏪',name:'시간 역행',desc:'적들의 위치를 3초 전으로 되돌리고 체력을 1 회복합니다!',apply(){
+  hp=Math.min(3,hp+1);
+  if(historyPositions.length>0){
+   const oldState = historyPositions[0];
+   enemies = oldState.enemies.map(e=>({...e}));
+   bullets = [];
+  }
+  addParticles(player.x, player.y, '#c084fc', 25);
+  playSound('rewind');
+  addFloatingText('시간 역행! ⏪', player.x, player.y - 20, '#c084fc');
+ }},
+ reflect:{emoji:'🪞',name:'반사 거울',desc:'8초 동안 모든 적의 총알에 부딪히지 않고 적에게 반사합니다!',apply(){reflectTimer=8;abilities.reflect=true;addFloatingText('반사 거울 온! 🪞', player.x, player.y - 20, '#67e8f9');}},
+ giant:{emoji:'🍄',name:'거대화 쿵쿵이',desc:'6초 동안 크기가 3배 커지며, 닿는 모든 적을 짓밟아 파괴합니다!',apply(){giantTimer=6;abilities.giant=true;addFloatingText('거대화 쿵쿵! 🍄', player.x, player.y - 20, '#facc15');}},
+ fever:{emoji:'🪙',name:'골드 피버',desc:'8초간 적들이 황금으로 변해 공격을 멈추고 보너스 구슬이 차오릅니다!',apply(){feverTimer=8;abilities.fever=true;addFloatingText('GOLD FEVER! 🪙', player.x, player.y - 20, '#facc15');}},
+ siuu:{emoji:'⚽',name:'SIUUU! 충격파',desc:'2.5초마다 랜덤 방향으로 강력한 SIUUU 충격파를 발사해 적을 쓸어버립니다!',apply(){abilities.siuu=true;siuuTimer=0;addFloatingText('SIUUU! ⚽', player.x, player.y - 20, '#facc15');}}
+};
+
+function reset(){
+ elapsed=0;score=0;hp=3;enemies=[];bullets=[];particles=[];pickups=[];floatingTexts=[];historyPositions=[];
+ spawnTimer=.4;shotTimer=1;nextAbility=0;combo=0;comboTimer=0;invuln=0;dashCooldown=0;shield=0;
+ shockTimer=0;slowTimer=0;cloneTimer=0;freezeTimer=0;laserTimer=0;siuuTimer=0;blackholeTimer=0;blackholeObj=null;
+ reflectTimer=0;giantTimer=0;feverTimer=0;cloneObj=null;healSpawnTimer=10;currentRankIdx=0;
+ joystickActive=false;joystickX=0;joystickY=0;joystickPointerId=null;resetJoystickKnob();
+ abilities={speed:0,shock:false,magnet:false,regen:false,shield:false,slow:false,clone:false,freeze:false,bomb:false,laser:false,blackhole:false,rewind:false,reflect:false,giant:false,fever:false,siuu:false};
+ player={x:W/2,y:H/2,r:12,speed:235,dx:0,dy:0,dash:0};
+ updateHUD();
+}
+
+function addFloatingText(text, x, y, color='#fff'){
+ floatingTexts.push({text, x, y, vy:-35, life:1.2, maxLife:1.2, color});
+}
+
+function start(){reset();state='playing';mainOverlay.classList.add('hidden');endOverlay.classList.add('hidden');abilityOverlay.classList.add('hidden');$('pauseBtn').hidden=false;$('pauseBtn').textContent='Ⅱ 일시정지';last=performance.now();playSound('select');}
+function menu(){state='menu';mainOverlay.classList.remove('hidden');abilityOverlay.classList.add('hidden');endOverlay.classList.add('hidden');$('pauseBtn').hidden=true;}
+function pause(){if(state==='playing'){state='paused';$('pauseBtn').textContent='▶ 계속';mainOverlay.classList.remove('hidden');mainOverlay.querySelector('.big').textContent='⏸️';mainOverlay.querySelector('h2').textContent='일시정지';mainOverlay.querySelector('p').innerHTML='잠깐 쉬어도 괜찮아요.<br>준비되면 계속 도전하세요.';$('startBtn').textContent='계속하기 ▶';}else if(state==='paused'){state='playing';mainOverlay.classList.add('hidden');$('pauseBtn').textContent='Ⅱ 일시정지';last=performance.now();playSound('select');}}
+
+function end(win){
+ state='ended';$('pauseBtn').hidden=true;
+ const survived=Math.min(MAX_SURVIVAL_TIME,elapsed);
+ if(win){ score += 5000; playSound('win'); } else { playSound('hit'); }
+ $('endEmoji').textContent=win?'🏆':'💫';
+ $('endTitle').textContent=win?'5분 생존 완벽 클리어!':'아쉽다! 다시 도전해 봐';
+ $('endText').innerHTML=`생존 시간 <b>${survived.toFixed(1)}초</b><br>달성 계급 <b>${rankMilestones[currentRankIdx].title}</b><br>최종 점수 <b>${Math.floor(score).toLocaleString('ko-KR')}</b><br>${win?'🎉 300초 완주 보너스 +5,000점 포함!':'다음에는 SIUUU 스킬을 활용해보세요.'}`;
+ if(score>best){best=Math.floor(score);try{localStorage.setItem('survive300Best',best)}catch(e){}}
+ $('best').textContent=best.toLocaleString('ko-KR');$('endOverlay').classList.remove('hidden');updateHUD();
+}
+
+function chooseAbility(){
+ state='ability';playSound('select');abilityOverlay.classList.remove('hidden');const grid=$('abilityGrid');grid.innerHTML='';
+ let pool=Object.keys(abilityInfo).filter(k=>!(k==='regen'&&hp===3)&&!(k==='shield'&&shield>=3));
+ for(let i=pool.length-1;i>0;i--){let j=Math.floor(Math.random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]];}
+ pool.slice(0,3).forEach(k=>{
+  const a=abilityInfo[k],b=document.createElement('button');b.className='ability';
+  b.innerHTML=`<div class="emoji">${a.emoji}</div><div><strong>${a.name}</strong><small>${a.desc}</small></div>`;
+  b.addEventListener('click',()=>{
+   a.apply();
+   invuln = Math.max(invuln, 2.0);
+   addParticles(player.x, player.y, '#67e8f9', 20);
+   playSound('select');
+   abilityOverlay.classList.add('hidden');
+   state='playing';
+   updateHUD();
+   last=performance.now();
+  });
+  grid.appendChild(b);
+ });
+}
+
+function updateHUD(){
+ $('time').textContent=Math.max(0,MAX_SURVIVAL_TIME-elapsed).toFixed(1)+'초';
+ $('hearts').textContent=hp>0?('♥ '.repeat(hp)).trim()+' '+('♡ '.repeat(3-hp)).trim():'♡ ♡ ♡';
+ $('score').textContent=Math.floor(score).toLocaleString('ko-KR');
+ 
+ const currentRank = rankMilestones[currentRankIdx];
+ $('rankBadge').textContent = currentRank.title;
+ $('rankBadge').style.color = currentRank.color;
+
+ let abList = [];
+ if(shield) abList.push('실드');
+ if(abilities.speed) abList.push('속도+');
+ if(abilities.shock) abList.push('충격파');
+ if(abilities.magnet) abList.push('자석');
+ if(abilities.clone && cloneTimer>0) abList.push('분신');
+ if(abilities.laser) abList.push('레이저');
+ if(abilities.blackhole) abList.push('블랙홀');
+ if(abilities.reflect && reflectTimer>0) abList.push('반사');
+ if(abilities.giant && giantTimer>0) abList.push('거대화');
+ if(abilities.fever && feverTimer>0) abList.push('피버');
+ if(abilities.siuu) abList.push('SIUUU');
+ $('abilityStatus').textContent='능력: '+(abList.length>0 ? abList.join(', ') : '없음');
+ 
+ const cdPct = Math.min(100, (dashCooldown / MAX_DASH_CD) * 100);
+ $('dashCdOverlay').style.height = cdPct + '%';
+}
+
+function rand(a,b){return a+Math.random()*(b-a)}
+
+function spawnEnemy(){
+ const side=Math.floor(Math.random()*4);let x,y;
+ if(side===0){x=rand(0,W);y=-25}else if(side===1){x=W+25;y=rand(0,H)}else if(side===2){x=rand(0,W);y=H+25}else{x=-25;y=rand(0,H)}
+ const t=Math.random();
+ let type=t<.60?'chaser':t<.82?'runner':'shooter';
+ if(elapsed<12&&type==='shooter')type='chaser';
+ enemies.push({x,y,r:type==='shooter'?15:type==='runner'?11:13,type,hp:1,phase:rand(0,6),shot:rand(1,2.5)});
+}
+
+function addParticles(x,y,color,n=8){
+ for(let i=0;i<n;i++){let a=Math.random()*Math.PI*2,s=rand(35,180);particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:rand(.2,.65),max:.65,color,r:rand(2,4)});}
+}
+
+function hurt(){
+ if(invuln>0 || giantTimer>0)return;
+ screenShake = 0.25;
+ if(shield>0){shield--;invuln=2.0;addParticles(player.x,player.y,'#67e8f9',16);playSound('hit');updateHUD();return;}
+ hp--;invuln=1.15;combo=0;addParticles(player.x,player.y,'#fb7185',18);playSound('hit');
+ updateHUD();
+ if(hp<=0)end(false);
+}
+
+function dash(){
+ if(state!=='playing'||dashCooldown>0)return;
+ playSound('dash');
+ invuln = Math.max(invuln, 0.2);
+ let dx=player.dx,dy=player.dy;
+ if(!dx&&!dy){dx=1;dy=0}
+ let l=Math.hypot(dx,dy)||1;player.x+=dx/l*110;player.y+=dy/l*110;
+ player.x=Math.max(player.r,Math.min(W-player.r,player.x));player.y=Math.max(player.r,Math.min(H-player.r,player.y));
+ player.dash=.18;dashCooldown=MAX_DASH_CD;addParticles(player.x,player.y,'#67e8f9',14);
+}
+
+function update(dt){
+ if(state!=='playing')return;
+ elapsed+=dt;score+=dt*12;
+
+ if(currentRankIdx < rankMilestones.length - 1){
+  if(elapsed >= rankMilestones[currentRankIdx + 1].time){
+   currentRankIdx++;
+   playSound('rankUp');
+   addFloatingText(`계급 상승! ${rankMilestones[currentRankIdx].title}`, W/2, H/2 - 40, rankMilestones[currentRankIdx].color);
+  }
+ }
+
+ historyPositions.push({time:elapsed, player:{x:player.x, y:player.y}, enemies:enemies.map(e=>({...e}))});
+ if(historyPositions.length > 90) historyPositions.shift();
+
+ invuln=Math.max(0,invuln-dt);
+ dashCooldown=Math.max(0,dashCooldown-dt);
+ slowTimer=Math.max(0,slowTimer-dt);
+ freezeTimer=Math.max(0,freezeTimer-dt);
+ cloneTimer=Math.max(0,cloneTimer-dt);
+ reflectTimer=Math.max(0,reflectTimer-dt);
+ giantTimer=Math.max(0,giantTimer-dt);
+ feverTimer=Math.max(0,feverTimer-dt);
+ screenShake=Math.max(0,screenShake-dt);
+ comboTimer-=dt;if(comboTimer<=0)combo=0;
+
+ if(nextAbility < abilityTimes.length && elapsed>=abilityTimes[nextAbility]){
+  nextAbility++;chooseAbility();updateHUD();return;
+ }
+
+ const effectiveR = giantTimer>0 ? player.r * 2.8 : player.r;
+ const speed=player.speed*1.35*(1+abilities.speed*.25);
+ let dx=0,dy=0;
+ if(keys.has('ArrowLeft')||keys.has('a')||keys.has('A'))dx--;
+ if(keys.has('ArrowRight')||keys.has('d')||keys.has('D'))dx++;
+ if(keys.has('ArrowUp')||keys.has('w')||keys.has('W'))dy--;
+ if(keys.has('ArrowDown')||keys.has('s')||keys.has('S'))dy++;
+ if(joystickActive){dx=joystickX;dy=joystickY;}
+ const len=Math.hypot(dx,dy)||1;player.dx=dx;player.dy=dy;
+ if(Math.hypot(dx,dy)>0){player.x+=dx/len*speed*dt;player.y+=dy/len*speed*dt;}
+ player.x=Math.max(effectiveR,Math.min(W-effectiveR,player.x));
+ player.y=Math.max(effectiveR,Math.min(H-effectiveR,player.y));
+
+ if(abilities.siuu){
+  siuuTimer += dt;
+  if(siuuTimer >= 2.5){
+   siuuTimer = 0;
+   const randomAngle = Math.random() * Math.PI * 2;
+   const dirX = Math.cos(randomAngle);
+   const dirY = Math.sin(randomAngle);
+   const beamWidth = 70;
+   
+   playSound('siuu');
+   addFloatingText('SIUUU! ⚽💥', player.x, player.y - 35, '#facc15');
+   screenShake = 0.25;
+
+   for(let dist=20; dist<1100; dist+=30){
+    const px = player.x + dirX * dist;
+    const py = player.y + dirY * dist;
+    addParticles(px, py, '#facc15', 3);
+    addParticles(px + rand(-15,15), py + rand(-15,15), '#fb7185', 2);
+   }
+
+   for(let i=enemies.length-1; i>=0; i--){
+    const e = enemies[i];
+    const ex = e.x - player.x;
+    const ey = e.y - player.y;
+    const dot = ex * dirX + ey * dirY;
+    if(dot > 0){
+     const distToLine = Math.abs(ex * (-dirY) + ey * dirX);
+     if(distToLine < beamWidth + e.r){
+      enemies.splice(i, 1);
+      score += 70;
+      addParticles(e.x, e.y, '#facc15', 12);
+      addFloatingText('SIU!', e.x, e.y, '#facc15');
+     }
+    }
+   }
+
+   for(let i=bullets.length-1; i>=0; i--){
+    const b = bullets[i];
+    const bx = b.x - player.x;
+    const by = b.y - player.y;
+    const dot = bx * dirX + by * dirY;
+    if(dot > 0){
+     const distToLine = Math.abs(bx * (-dirY) + by * dirX);
+     if(distToLine < beamWidth + b.r){
+      bullets.splice(i, 1);
+     }
+    }
+   }
+  }
+ }
+
+ if(abilities.blackhole){
+  blackholeTimer += dt;
+  if(blackholeTimer >= 8.0){
+   blackholeTimer = 0;
+   blackholeObj = { x: W/2, y: H/2, radius: 140, life: 3.5 };
+   addFloatingText('블랙홀 생성! 🌀', W/2, H/2 - 20, '#c084fc');
+  }
+ }
+ if(blackholeObj){
+  blackholeObj.life -= dt;
+  if(blackholeObj.life <= 0){
+   blackholeObj = null;
+  }else{
+   for(let i=enemies.length-1; i>=0; i--){
+    let e = enemies[i];
+    let d = Math.hypot(e.x - blackholeObj.x, e.y - blackholeObj.y);
+    if(d < blackholeObj.radius){
+     e.x += (blackholeObj.x - e.x)*3*dt;
+     e.y += (blackholeObj.y - e.y)*3*dt;
+     if(d < 20){ enemies.splice(i,1); score += 40; addParticles(e.x, e.y, '#c084fc', 6); }
+    }
+   }
+   for(let i=bullets.length-1; i>=0; i--){
+    let b = bullets[i];
+    let d = Math.hypot(b.x - blackholeObj.x, b.y - blackholeObj.y);
+    if(d < blackholeObj.radius){
+     b.x += (blackholeObj.x - b.x)*5*dt;
+     b.y += (blackholeObj.y - b.y)*5*dt;
+     if(d < 20){ bullets.splice(i,1); }
+    }
+   }
+  }
+ }
+
+ if(abilities.laser){
+  laserTimer+=dt;
+  if(laserTimer>=0.8 && enemies.length>0){
+   laserTimer=0;
+   let closestIdx=0, minD=9999;
+   enemies.forEach((e,idx)=>{let d=Math.hypot(e.x-player.x, e.y-player.y); if(d<minD){minD=d; closestIdx=idx;}});
+   const target=enemies[closestIdx];
+   addParticles(target.x, target.y, '#67e8f9', 15);
+   particles.push({x:player.x, y:player.y, vx:0, vy:0, life:0.3, max:0.3, color:'#67e8f9', r:1, laserTarget:{x:target.x, y:target.y}});
+   enemies.splice(closestIdx, 1);
+   score+=35; playSound('dash');
+  }
+ }
+
+ spawnTimer-=dt;
+ if(spawnTimer<=0){spawnEnemy();spawnTimer=Math.max(.14,.65-elapsed*.0015);}
+ 
+ if(freezeTimer<=0 && feverTimer<=0){
+  shotTimer-=dt;
+  if(shotTimer<=0){
+   shotTimer=1.35;
+   enemies.filter(e=>e.type==='shooter').forEach(e=>{
+    let targetPos = (cloneTimer>0 && cloneObj) ? cloneObj : player;
+    let ax=targetPos.x-e.x,ay=targetPos.y-e.y,l=Math.hypot(ax,ay)||1;
+    bullets.push({x:e.x,y:e.y,vx:ax/l*190*0.7,vy:ay/l*190*0.7,r:6});
+   });
+  }
+ }
+
+ if(abilities.shock){
+  shockTimer-=dt;
+  if(shockTimer<=0){
+   shockTimer=2.0;
+   enemies.forEach(e=>{let ax=e.x-player.x,ay=e.y-player.y,l=Math.hypot(ax,ay)||1;if(l<170){e.x+=ax/l*75;e.y+=ay/l*75;addParticles(e.x,e.y,'#c084fc',4);}});
+   addParticles(player.x,player.y,'#c084fc',20);
+  }
+ }
+ 
+ const slow=slowTimer>0?.5:1;
+ const isFrozen=freezeTimer>0;
+
+ for(let i=enemies.length-1;i>=0;i--){
+  const e=enemies[i];e.phase+=dt;
+  let tx=(cloneTimer>0 && cloneObj)?cloneObj.x:player.x;
+  let ty=(cloneTimer>0 && cloneObj)?cloneObj.y:player.y;
+
+  let ax=tx-e.x,ay=ty-e.y,l=Math.hypot(ax,ay)||1;
+  const sp=(e.type==='runner'?170:e.type==='shooter'?65:90)*(1+elapsed*.002)*slow*0.7;
+  
+  if(!isFrozen && feverTimer<=0){
+   if(e.type==='shooter'&&l<230){e.x-=ax/l*sp*dt;e.y-=ay/l*sp*dt;}else{e.x+=ax/l*sp*dt;e.y+=ay/l*sp*dt;}
+  }else if(feverTimer>0){
+   e.x -= ax/l*sp*0.6*dt; e.y -= ay/l*sp*0.6*dt;
+  }
+
+  if(l < e.r + effectiveR){
+   if(giantTimer > 0){
+    enemies.splice(i,1); score += 80;
+    addParticles(e.x, e.y, '#facc15', 12);
+    playSound('bomb');
+    addFloatingText('CRUSH! 💥', e.x, e.y, '#facc15');
+   }else if(feverTimer > 0){
+    enemies.splice(i,1); score += 150;
+    addParticles(e.x, e.y, '#facc15', 18);
+    playSound('item');
+    addFloatingText('+150 GOLD! 🪙', e.x, e.y, '#facc15');
+   }else{
+    if(cloneTimer<=0 || !cloneObj || Math.hypot(e.x-player.x, e.y-player.y) < e.r+player.r){
+     hurt();let push=Math.max(1,l);e.x-=ax/push*30;e.y-=ay/push*30;
+    }
+   }
+  }
+  if(e.x<-100||e.x>W+100||e.y<-100||e.y>H+100)enemies.splice(i,1);
+ }
+
+ for(let i=bullets.length-1;i>=0;i--){
+  let b=bullets[i];
+  if(!isFrozen && feverTimer<=0){b.x+=b.vx*dt;b.y+=b.vy*dt;}
+  if(b.x<-20||b.x>W+20||b.y<-20||b.y>H+20){bullets.splice(i,1);continue;}
+  
+  let d = Math.hypot(b.x-player.x,b.y-player.y);
+  if(d < b.r + effectiveR){
+   if(reflectTimer > 0){
+    bullets.splice(i,1);
+    score += 50;
+    addParticles(b.x, b.y, '#67e8f9', 10);
+    addFloatingText('REFLECT! 🪞', b.x, b.y, '#67e8f9');
+   }else{
+    bullets.splice(i,1);hurt();
+   }
+  }
+ }
+
+ for(const e of enemies){
+  const d=Math.hypot(e.x-player.x,e.y-player.y);
+  if(d < e.r + effectiveR + 18 && d > e.r + effectiveR + 3 && Math.random()<dt*1.5){
+   score+=30;combo++;comboTimer=1.3;
+   if(combo % 3 === 0){
+    addFloatingText(`PERFECT DODGE! x${combo}`, player.x, player.y - 25, '#facc15');
+   }
+  }
+ }
+
+ if(Math.random()<dt*.65)pickups.push({type:'score',x:rand(24,W-24),y:rand(24,H-24),r:7,life:8});
+ healSpawnTimer-=dt;
+ if(healSpawnTimer<=0){
+  pickups.push({type:'heal',x:rand(W*.25,W*.75),y:rand(H*.25,H*.75),r:12,life:999});
+  healSpawnTimer+=10;
+ }
+ for(let i=pickups.length-1;i>=0;i--){let p=pickups[i];p.life-=dt;let d=Math.hypot(p.x-player.x,p.y-player.y);
+  if(p.type!=='heal'&&abilities.magnet&&d<210){p.x+=(player.x-p.x)/Math.max(1,d)*180*dt;p.y+=(player.y-p.y)/Math.max(1,d)*180*dt;d=Math.hypot(p.x-player.x,p.y-player.y);}
+  if(d<p.r+effectiveR){
+   playSound('item');
+   if(p.type==='heal'){if(hp<3){hp=Math.min(3,hp+1);addParticles(p.x,p.y,'#4ade80',14);pickups.splice(i,1);updateHUD();}}
+   else{score+=50;addParticles(p.x,p.y,'#facc15',7);pickups.splice(i,1);}
+  }else if(p.life<=0)pickups.splice(i,1);
+ }
+
+ for(let i=particles.length-1;i>=0;i--){let p=particles[i];p.life-=dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.vx*=.97;p.vy*=.97;if(p.life<=0)particles.splice(i,1);}
+ for(let i=floatingTexts.length-1;i>=0;i--){let ft=floatingTexts[i];ft.life-=dt;ft.y+=ft.vy*dt;if(ft.life<=0)floatingTexts.splice(i,1);}
+
+ if(elapsed>=MAX_SURVIVAL_TIME){elapsed=MAX_SURVIVAL_TIME;end(true);}
+ updateHUD();
+}
+
+function draw(){
+ ctx.save();
+ ctx.clearRect(0,0,W,H);
+ if(screenShake > 0){
+  ctx.translate(rand(-6,6), rand(-6,6));
+ }
+ ctx.fillStyle='#091020';ctx.fillRect(0,0,W,H);
+ ctx.strokeStyle='#172440';ctx.lineWidth=1;
+ for(let x=0;x<W;x+=40){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+ for(let y=0;y<H;y+=40){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+ const grad=ctx.createRadialGradient(W/2,H/2,20,W/2,H/2,430);grad.addColorStop(0,'#14264a44');grad.addColorStop(1,'#09102000');ctx.fillStyle=grad;ctx.fillRect(0,0,W,H);
+ 
+ if(blackholeObj){
+  ctx.save();
+  ctx.shadowColor = '#c084fc'; ctx.shadowBlur = 25;
+  ctx.fillStyle = '#1e1035';
+  ctx.beginPath(); ctx.arc(blackholeObj.x, blackholeObj.y, 30 + Math.sin(performance.now()/80)*5, 0, Math.PI*2); ctx.fill();
+  ctx.strokeStyle = '#c084fc'; ctx.lineWidth = 4;
+  ctx.beginPath(); ctx.arc(blackholeObj.x, blackholeObj.y, blackholeObj.radius, 0, Math.PI*2); ctx.stroke();
+  ctx.restore();
+ }
+
+ if(cloneTimer > 0 && cloneObj){
+  ctx.save();
+  ctx.globalAlpha = 0.6 + 0.2*Math.sin(performance.now()/100);
+  ctx.shadowColor = '#06b6d4'; ctx.shadowBlur = 18;
+  ctx.fillStyle = '#06b6d4';
+  ctx.beginPath(); ctx.arc(cloneObj.x, cloneObj.y, player.r, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 11px system-ui'; ctx.textAlign = 'center';
+  ctx.fillText('분신', cloneObj.x, cloneObj.y - 16);
+  ctx.restore();
+ }
+
+ for(const p of pickups){ctx.save();ctx.globalAlpha=.7+.3*Math.sin(performance.now()/130);if(p.type==='heal'){ctx.shadowColor='#4ade80';ctx.shadowBlur=18;ctx.fillStyle='#166534';ctx.beginPath();ctx.arc(p.x,p.y,p.r+4,0,Math.PI*2);ctx.fill();ctx.fillStyle='#4ade80';ctx.fillRect(p.x-3.5,p.y-9,7,18);ctx.fillRect(p.x-9,p.y-3.5,18,7);ctx.strokeStyle='#dcfce7';ctx.lineWidth=1.5;ctx.strokeRect(p.x-3.5,p.y-9,7,18);ctx.strokeRect(p.x-9,p.y-3.5,18,7);}else{ctx.fillStyle='#facc15';ctx.shadowColor='#facc15';ctx.shadowBlur=14;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fill();}ctx.restore();}
+ for(const b of bullets){ctx.fillStyle='#fb7185';ctx.shadowColor='#fb7185';ctx.shadowBlur=12;ctx.beginPath();ctx.arc(b.x,b.y,b.r,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;}
+ 
+ for(const e of enemies){
+  ctx.save();ctx.shadowBlur=14;
+  if(feverTimer>0){
+   ctx.shadowColor='#facc15'; ctx.fillStyle='#facc15';
+  }else if(freezeTimer>0){
+   ctx.shadowColor='#38bdf8'; ctx.fillStyle='#93c5fd';
+  }else{
+   ctx.shadowColor=e.type==='runner'?'#f97316':e.type==='shooter'?'#a78bfa':'#fb7185';
+   ctx.fillStyle=e.type==='runner'?'#f97316':e.type==='shooter'?'#8b5cf6':'#e94d78';
+  }
+  ctx.beginPath();ctx.arc(e.x,e.y,e.r,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;
+  ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(e.x-e.r*.3,e.y-e.r*.1,2.5,0,Math.PI*2);ctx.arc(e.x+e.r*.3,e.y-e.r*.1,2.5,0,Math.PI*2);ctx.fill();ctx.restore();
+ }
+ 
+ for(const p of particles){
+  if(p.laserTarget){
+   ctx.strokeStyle='#67e8f9'; ctx.lineWidth=3; ctx.shadowColor='#67e8f9'; ctx.shadowBlur=15;
+   ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.laserTarget.x, p.laserTarget.y); ctx.stroke();
+  }else{
+   ctx.globalAlpha=Math.max(0,p.life/p.max);ctx.fillStyle=p.color;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fill();
+  }
+ }
+ ctx.globalAlpha=1;
+ 
+ if(player){
+  ctx.save();
+  const curR = giantTimer>0 ? player.r * 2.8 : player.r;
+  
+  if(giantTimer > 0){
+   ctx.shadowColor = '#facc15'; ctx.shadowBlur = 30;
+   ctx.fillStyle = '#facc15';
+   ctx.beginPath(); ctx.arc(player.x, player.y, curR, 0, Math.PI*2); ctx.fill();
+  }else if(invuln > 0){
+   ctx.strokeStyle = '#67e8f9'; ctx.lineWidth = 3; ctx.shadowColor = '#67e8f9'; ctx.shadowBlur = 18;
+   ctx.beginPath(); ctx.arc(player.x, player.y, curR + 12, 0, Math.PI*2); ctx.stroke();
+   if(Math.floor(performance.now()/90)%2===0) ctx.globalAlpha = 0.65;
+  }
+  
+  if(reflectTimer > 0){
+   ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 3; ctx.setLineDash([6, 4]);
+   ctx.beginPath(); ctx.arc(player.x, player.y, curR + 16, 0, Math.PI*2); ctx.stroke();
+   ctx.setLineDash([]);
+  }
+
+  if(shield>0){
+   ctx.strokeStyle='#facc15';ctx.lineWidth=2;ctx.shadowColor='#facc15';ctx.shadowBlur=12;
+   ctx.beginPath();ctx.arc(player.x,player.y,curR+6,0,Math.PI*2);ctx.stroke();
+  }
+  ctx.shadowColor='#38bdf8';ctx.shadowBlur=22;ctx.fillStyle='#38bdf8';ctx.beginPath();ctx.arc(player.x,player.y,curR,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;
+  ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(player.x-curR*0.3,player.y-curR*0.2,curR*0.25,0,Math.PI*2);ctx.arc(player.x+curR*0.3,player.y-curR*0.2,curR*0.25,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle='#bae6fd';ctx.lineWidth=2;ctx.beginPath();ctx.arc(player.x,player.y,curR+3,0,Math.PI*2);ctx.stroke();
+  ctx.restore();
+ }
+
+ for(const ft of floatingTexts){
+  ctx.save();
+  ctx.globalAlpha = Math.max(0, ft.life / ft.maxLife);
+  ctx.fillStyle = ft.color;
+  ctx.font = 'bold 16px system-ui';
+  ctx.textAlign = 'center';
+  ctx.shadowColor = '#000'; ctx.shadowBlur = 6;
+  ctx.fillText(ft.text, ft.x, ft.y);
+  ctx.restore();
+ }
+
+ ctx.fillStyle='#243451';ctx.fillRect(0,0,W,5);ctx.fillStyle='#22d3ee';ctx.fillRect(0,0,W*Math.min(1,elapsed/MAX_SURVIVAL_TIME),5);
+ if(state==='playing'&&combo>=2){ctx.fillStyle='#facc15';ctx.font='bold 18px system-ui';ctx.textAlign='center';ctx.fillText(`회피 콤보 ×${combo}`,W/2,32);}
+ ctx.restore();
+}
+
+function loop(now){const dt=Math.min(.033,(now-last)/1000||0);last=now;if(state==='playing')update(dt);draw();requestAnimationFrame(loop);}
+
+$('startBtn').addEventListener('click',e=>{e.preventDefault();if(state==='paused')pause();else start();});
+$('restartBtn').addEventListener('click',start);$('menuBtn').addEventListener('click',menu);
+$('pauseBtn').addEventListener('click',pause);
+
+window.addEventListener('keydown',e=>{
+ if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key))e.preventDefault();
+ keys.add(e.key);
+ if(e.key==='Shift'||e.key===' ')dash();
+ if(e.key==='Escape')pause();
+});
+window.addEventListener('keyup',e=>keys.delete(e.key));
+window.addEventListener('blur',()=>{keys.clear();if(state==='playing')pause();});
+
+$('dashBtn').addEventListener('pointerdown',e=>{e.preventDefault();dash();});
+
+const joystickPad=$('joystickPad'),joystickKnob=$('joystickKnob');
+function resetJoystickKnob(){ if(joystickKnob)joystickKnob.style.transform='translate(-50%,-50%)'; }
+
+function updateJoystick(e){
+ const r=joystickPad.getBoundingClientRect();
+ const cx=r.left+r.width/2,cy=r.top+r.height/2;
+ const max=r.width*0.35;
+ let x=e.clientX-cx,y=e.clientY-cy;
+ const d=Math.hypot(x,y)||1;
+ const visualDist = Math.min(d, max);
+ joystickX=x/d; joystickY=y/d;
+ joystickKnob.style.transform=`translate(calc(-50% + ${x/d*visualDist}px), calc(-50% + ${y/d*visualDist}px))`;
+}
+
+joystickPad.addEventListener('pointerdown',e=>{
+ if(state!=='playing')return;
+ e.preventDefault();
+ joystickActive=true;
+ joystickPointerId=e.pointerId;
+ updateJoystick(e);
+});
+
+window.addEventListener('pointermove',e=>{
+ if(!joystickActive||state!=='playing')return;
+ if(e.pointerId===joystickPointerId){
+  e.preventDefault();
+  updateJoystick(e);
+ }
+});
+
+function stopJoystick(e){
+ if(e && e.pointerId !== undefined && e.pointerId !== joystickPointerId) return;
+ joystickActive=false;
+ joystickPointerId=null;
+ joystickX=0; joystickY=0;
+ resetJoystickKnob();
+}
+
+window.addEventListener('pointerup',stopJoystick);
+window.addEventListener('pointercancel',stopJoystick);
+
+reset();requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
